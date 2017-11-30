@@ -134,8 +134,6 @@ services:
     mysql:
       build:
         context: ./mysql
-        args:
-          - MYSQL_VERSION=${MYSQL_VERSION}
       environment:
         - MYSQL_DATABASE=${MYSQL_DATABASE}
         - MYSQL_USER=${MYSQL_USER}
@@ -147,6 +145,23 @@ services:
         - ${MYSQL_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
       ports:
         - "${MYSQL_PORT}:3306"
+      networks:
+        - backend
+
+### MariaDB Container #######################################
+
+    mariadb:
+      build: ./mariadb
+      volumes:
+        - ${DATA_SAVE_PATH}/mariadb:/var/lib/mysql
+        - ${MARIADB_ENTRYPOINT_INITDB}:/docker-entrypoint-initdb.d
+      ports:
+        - "${MARIADB_PORT}:3306"
+      environment:
+        - MYSQL_DATABASE=${MARIADB_DATABASE}
+        - MYSQL_USER=${MARIADB_USER}
+        - MYSQL_PASSWORD=${MARIADB_PASSWORD}
+        - MYSQL_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       networks:
         - backend
 
