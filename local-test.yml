@@ -62,6 +62,8 @@ services:
       networks:
         - dam-frontend
         - dam-backend
+        - dropout-frontend
+        - dropout-backend
 
 ### PHP-FPM Container #######################################
 
@@ -106,6 +108,7 @@ services:
         - PHP_IDE_CONFIG=${PHP_IDE_CONFIG}
       networks:
         - dam-backend
+        - dropout-backend
 
 ### NGINX Server Container ##################################
 
@@ -128,6 +131,54 @@ services:
       networks:
         - dam-frontend
         - dam-backend
+        - dropout-frontend
+        - dropout-backend
+
+### MySQL dropout-private Container #########################################
+
+    mysql-dropout-private:
+      build:
+        context: ./mysql
+        args:
+         - MYSQL_TYPE=dropout-private
+         - MYSQL_VERSION=${MYSQL_VERSION}
+      environment:
+        - MYSQL_DATABASE=${MYSQL_DROPOUT_DATABASE}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - TZ=${WORKSPACE_TIMEZONE}
+      volumes:
+        - ${DATA_SAVE_PATH}/mysql-dropout-private:/var/lib/mysql
+        - ./mysql/docker-entrypoint-initdb.d/dropout-private:/docker-entrypoint-initdb.d
+      ports:
+        - "${MYSQL_DROPOUT_PRIVATE_PORT}:3306"
+      networks:
+        - dropout-backend
+        - dropout-database
+
+### MySQL dropout-public Container #########################################
+
+    mysql-dropout-public:
+      build:
+        context: ./mysql
+        args:
+          - MYSQL_TYPE=dropout-public
+          - MYSQL_VERSION=${MYSQL_VERSION}
+      environment:
+        - MYSQL_DATABASE=${MYSQL_DROPOUT_DATABASE}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - TZ=${WORKSPACE_TIMEZONE}
+      volumes:
+        - ${DATA_SAVE_PATH}/mysql-dropout-public:/var/lib/mysql
+        - ./mysql/docker-entrypoint-initdb.d/dropout-public:/docker-entrypoint-initdb.d
+      ports:
+        - "${MYSQL_DROPOUT_PUBLIC_PORT}:3306"
+      networks:
+        - dropout-backend
+        - dropout-database
 
 ### MySQL Container #########################################
 
@@ -170,13 +221,51 @@ services:
       networks:
         - dam-backend
 
+### elasticsearch Container #########################################
+
+    elasticsearch:
+      build:
+        context: ./elasticsearch
+      volumes:
+        - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+        - elasticsearch-data:/usr/share/elasticsearch/data
+        - elasticsearch-plugins:/usr/share/elasticsearch/plugins
+      ports:
+        - "${ELASTICSEARCH_HOST_HTTP_PORT}:9200"
+        - "${ELASTICSEARCH_HOST_TRANSPORT_PORT}:9300"
+      networks:
+        - dropout-frontend
+        - dropout-backend
+      environment:
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      depends_on:
+        - mysql-dropout-public
+
+### Kibana Container #######################################
+
+    kibana:
+      build: ./kibana
+      ports:
+        - "${KIBANA_HTTP_PORT}:5601"
+      depends_on:
+        - elasticsearch
+      networks:
+        - dropout-frontend
+        - dropout-backend
+
 ## Networks Setup ############################################
 
 networks:
   dam-frontend:
-    driver: "bridge"
+      driver: "bridge"
   dam-backend:
-    driver: "bridge"
+      driver: "bridge"
+  dropout-frontend:
+        driver: "bridge"
+  dropout-backend:
+      driver: "bridge"
+  dropout-database:
+      driver: "bridge"
 
 ### Volumes Setup #############################################
 
